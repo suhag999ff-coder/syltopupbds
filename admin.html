@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d1a">
+<title>SYL TOPUP BD ADMIN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<link rel="stylesheet" href="admin-style.css">
+</head>
+<body class="select-none">
+
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<section id="login-sec" class="login-bg">
+  <div class="login-particle"></div><div class="login-particle"></div>
+  <div class="login-particle"></div><div class="login-particle"></div>
+  <div class="login-particle"></div>
+  <div class="login-shell">
+    <div class="login-brand-top">
+      <div class="login-brand-icon"><div class="login-brand-inner"><i class="fas fa-shield-halved"></i></div></div>
+      <h1 class="login-brand-name" id="loginSiteName">SYL TOPUP BD</h1>
+      <div class="login-brand-tag"><i class="fas fa-lock"></i> Secure Admin</div>
+    </div>
+    <div class="login-card">
+      <div class="login-card-head">
+        <h2 class="login-card-title">Admin Login</h2>
+        <p class="login-card-sub">Control panel access</p>
+      </div>
+      <form onsubmit="event.preventDefault();adminLogin();">
+        <div class="login-field">
+          <label>Email</label>
+          <div class="login-input-wrap">
+            <i class="fas fa-envelope ic"></i>
+            <input type="email" id="admin-email" placeholder="admin@example.com">
+          </div>
+        </div>
+        <div class="login-field">
+          <label>Password</label>
+          <div class="login-input-wrap">
+            <i class="fas fa-lock ic"></i>
+            <input type="password" id="admin-pass" placeholder="Password">
+            <button type="button" class="toggle-pass" onclick="togglePass('admin-pass',this)"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+        <button type="submit" class="login-btn"><i class="fas fa-right-to-bracket"></i><span>Sign In</span></button>
+      </form>
+    </div>
+    <p class="login-foot"><i class="fas fa-shield-halved"></i> Authorized personnel only</p>
+  </div>
+</section>
+
+<!-- ═══════════════ ADMIN APP ═══════════════ -->
+<div id="admin-app" class="app-shell hidden">
+  <header class="bg-white/95 backdrop-blur sticky top-0 z-40 border-b border-[var(--line)]">
+    <div class="px-4 py-3 flex justify-between items-center gap-3">
+      <div class="min-w-0 flex items-center gap-2.5">
+        <div class="admin-icon-wrap">
+          <div class="admin-icon-ring"></div>
+          <div class="admin-icon-inner"><i class="fas fa-shield-halved"></i></div>
+        </div>
+        <div class="min-w-0">
+          <h1 class="text-[14px] font-black text-[var(--ink)] f-display leading-tight">SYL TOPUP BD<span class="text-[var(--brand)]"> ADMIN</span></h1>
+          <p class="text-[9px] font-bold uppercase tracking-widest text-[var(--muted)]" id="header-sitename">Control Center</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="live-badge"><span class="dot"></span><span>LIVE</span></div>
+        <button type="button" onclick="adminLogout()" class="btn btn-icon-sm" style="background:linear-gradient(135deg,#fee2e2,#fecaca);color:#dc2626;width:34px;height:34px"><i class="fas fa-power-off text-xs"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="sect p-3">
+      <div class="welcome-card">
+        <div class="welcome-content">
+          <div class="welcome-avatar" id="welcome-avatar"><i class="fas fa-user-shield"></i></div>
+          <div class="welcome-body">
+            <p class="welcome-eyebrow" id="welcome-greeting">Good Morning</p>
+            <h2 class="welcome-title" id="dash-welcome">SYL TOPUP BD</h2>
+            <div class="welcome-meta"><i class="fas fa-calendar-day"></i><span id="dash-date">Loading...</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-strip">
+        <div class="kpi-card c1" onclick="navTo('users')" style="cursor:pointer">
+          <div class="kpi-icon"><i class="fas fa-users"></i></div>
+          <p class="kpi-label">Total Users</p>
+          <p class="kpi-value" id="dash-users">0</p>
+        </div>
+        <div class="kpi-card c2" onclick="navTo('orders')" style="cursor:pointer">
+          <div class="kpi-icon"><i class="fas fa-shopping-bag"></i></div>
+          <p class="kpi-label">Total Orders</p>
+          <p class="kpi-value" id="dash-orders">0</p>
+        </div>
+        <div class="kpi-card c3" onclick="navTo('deposits')" style="cursor:pointer">
+          <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+          <p class="kpi-label">Pending Deposits</p>
+          <p class="kpi-value" id="dash-pending-dep">0</p>
+        </div>
+        <div class="kpi-card c4" onclick="navTo('orders')" style="cursor:pointer">
+          <div class="kpi-icon"><i class="fas fa-check-double"></i></div>
+          <p class="kpi-label">Pending Orders</p>
+          <p class="kpi-value" id="dash-pending-ord">0</p>
+        </div>
+      </div>
+
+      <div class="revenue-card">
+        <div class="revenue-content">
+          <div class="revenue-label"><i class="fas fa-coins"></i><span>Total Revenue</span></div>
+          <div class="revenue-amount" id="dash-revenue">৳ 0</div>
+          <div class="revenue-split">
+            <div class="revenue-split-item"><div class="lbl">Approved Deposits</div><div class="val" id="dash-total-dep">৳ 0</div></div>
+            <div class="revenue-split-item"><div class="lbl">Today's Orders</div><div class="val" id="dash-today-orders">0</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-header"><div class="section-header-left"><div class="section-header-bar"></div><span class="section-header-txt">Quick Actions</span></div></div>
+      <div class="action-grid">
+        <button type="button" onclick="navTo('orders')" class="action-tile">
+          <div class="action-icon" style="background:linear-gradient(135deg,#2563eb,#6366f1)"><i class="fas fa-shopping-bag"></i></div>
+          <div class="action-info"><div class="action-title">Orders</div><div class="action-sub">Manage</div></div>
+          <i class="fas fa-chevron-right action-arrow"></i>
+        </button>
+        <button type="button" onclick="navTo('users')" class="action-tile">
+          <div class="action-icon" style="background:linear-gradient(135deg,#7c3aed,#a855f7)"><i class="fas fa-users"></i></div>
+          <div class="action-info"><div class="action-title">Users</div><div class="action-sub">Accounts</div></div>
+          <i class="fas fa-chevron-right action-arrow"></i>
+        </button>
+        <button type="button" onclick="navTo('deposits')" class="action-tile">
+          <div class="action-icon" style="background:linear-gradient(135deg,#059669,#10b981)"><i class="fas fa-money-bill-transfer"></i></div>
+          <div class="action-info"><div class="action-title">Deposits</div><div class="action-sub">Approve</div></div>
+          <i class="fas fa-chevron-right action-arrow"></i>
+        </button>
+        <button type="button" onclick="navTo('products')" class="action-tile">
+          <div class="action-icon" style="background:linear-gradient(135deg,#0ea5e9,#0284c7)"><i class="fas fa-gamepad"></i></div>
+          <div class="action-info"><div class="action-title">Games</div><div class="action-sub">Products</div></div>
+          <i class="fas fa-chevron-right action-arrow"></i>
+        </button>
+      </div>
+
+      <div class="section-header"><div class="section-header-left"><div class="section-header-bar"></div><span class="section-header-txt">Content</span></div></div>
+      <div class="action-grid">
+        <button type="button" onclick="navTo('categories')" class="action-tile">
+          <div class="action-icon" style="background:linear-gradient(135deg,#ec4899,#be185d)"><i class="fas fa-layer-group"></i></div>
+          <div class="action-info"><div class="action-title">Categories</div><div class="action-sub">Reorder</div></div>
+          <i class="fas fa-chevron-right action-arrow"></i>
+        </button>
+        <button type="button" onclick="navTo('banners')" class="action-tile">
+          <div class="action-icon" style="background:linear-gradient(135deg,#a855f7,#7c3aed)"><i class="fas fa-images"></i></div>
+          <div class="action-info"><div class="action-title">Banners</div><div class="action-sub">Slider</div></div>
+          <i class="fas fa-chevron-right action-arrow"></i>
+        </button>
+        <button type="button" onclick="navTo('codes')" class="action-tile">
+          <div class="action-icon" style="background:linear-gradient(135deg,#10b981,#047857)"><i class="fas fa-ticket-alt"></i></div>
+          <div class="action-info"><div class="action-title">Codes</div><div class="action-sub">Redeem</div></div>
+          <i class="fas fa-chevron-right action-arrow"></i>
+        </button>
+        <button type="button" onclick="navTo('ranks')" class="action-tile">
+          <div class="action-icon" style="background:linear-gradient(135deg,#f59e0b,#b45309)"><i class="fas fa-medal"></i></div>
+          <div class="action-info"><div class="action-title">Ranks</div><div class="action-sub">Tiers</div></div>
+          <i class="fas fa-chevron-right action-arrow"></i>
+        </button>
+      </div>
+
+      <div class="section-header"><div class="section-header-left"><div class="section-header-bar"></div><span class="section-header-txt">Settings</span></div></div>
+      <div class="action-grid">
+        <button type="button" onclick="openSettingPage('payment')" class="action-tile">
+          <div class="action-icon" style="background:linear-gradient(135deg,#e2136e,#a21a54)"><i class="fas fa-credit-card"></i></div>
+          <div class="action-info"><div class="action-title">Payment</div><div class="action-sub">Numbers + QR</div></div>
+          <i class="fas fa-chevron-right action-arrow"></i>
+        </button>
+        <button type="button" onclick="openSettingPage('playerapi')" class="action-tile">
+          <div class="action-icon" style="background:linear-gradient(135deg,#0ea5e9,#0284c7)"><i class="fas fa-satellite-dish"></i></div>
+          <div class="action-info"><div class="action-title">Player API</div><div class="action-sub">UID lookup</div></div>
+          <i class="fas fa-chevron-right action-arrow"></i>
+        </button>
+        <button type="button" onclick="openSettingPage('accountval')" class="action-tile">
+          <div class="action-icon" style="background:linear-gradient(135deg,#eab308,#ca8a04)"><i class="fas fa-calculator"></i></div>
+          <div class="action-info"><div class="action-title">AVC Pricing</div><div class="action-sub">Value calc</div></div>
+          <i class="fas fa-chevron-right action-arrow"></i>
+        </button>
+        <button type="button" onclick="openSettingPage('general')" class="action-tile">
+          <div class="action-icon" style="background:linear-gradient(135deg,#64748b,#334155)"><i class="fas fa-cog"></i></div>
+          <div class="action-info"><div class="action-title">General</div><div class="action-sub">Config</div></div>
+          <i class="fas fa-chevron-right action-arrow"></i>
+        </button>
+      </div>
+
+      <div class="section-header"><div class="section-header-left"><div class="section-header-bar"></div><span class="section-header-txt">Live Overview</span></div></div>
+      <div class="mb-3">
+        <div class="user-row"><div class="user-av" style="background:linear-gradient(135deg,#2563eb,#6366f1)"><i class="fas fa-gamepad"></i></div><span class="flex-1 text-[12px] font-bold">Total Products</span><span class="text-[15px] font-black text-[var(--brand)] mono" id="kpi-products">0</span></div>
+        <div class="user-row"><div class="user-av" style="background:linear-gradient(135deg,#ec4899,#be185d)"><i class="fas fa-layer-group"></i></div><span class="flex-1 text-[12px] font-bold">Categories</span><span class="text-[15px] font-black text-[var(--brand)] mono" id="kpi-categories">0</span></div>
+        <div class="user-row"><div class="user-av" style="background:linear-gradient(135deg,#f59e0b,#fbbf24)"><i class="fas fa-ticket-alt"></i></div><span class="flex-1 text-[12px] font-bold">Active Codes</span><span class="text-[15px] font-black text-[var(--brand)] mono" id="kpi-codes">0</span></div>
+        <div class="user-row"><div class="user-av" style="background:linear-gradient(135deg,#059669,#34d399)"><i class="fas fa-images"></i></div><span class="flex-1 text-[12px] font-bold">Banners Live</span><span class="text-[15px] font-black text-[var(--brand)] mono" id="kpi-banners">0</span></div>
+      </div>
+
+      <div class="section-header"><div class="section-header-left"><div class="section-header-bar"></div><span class="section-header-txt">Recent Activity</span></div><button type="button" onclick="navTo('orders')" class="btn btn-xs" style="background:#f1f5f9;color:#475569">View all</button></div>
+      <div id="dash-recent" class="mb-4"></div>
+    </section>
+
+    <!-- DEPOSITS -->
+    <section id="view-deposits" class="hidden sect p-3">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#f59e0b] to-[#f97316] flex items-center justify-center text-white shadow-lg"><i class="fas fa-wallet text-base"></i></div>
+        <div><h2 class="text-[17px] font-black text-[var(--ink)] f-display">Deposits</h2><p class="text-[10.5px] text-[var(--muted)] font-medium">Top-up requests</p></div>
+      </div>
+      <div class="search-bar"><input type="text" id="dep-search" onkeyup="renderDeposits()" placeholder="Search trxID, email, amount..." class="inp"><i class="fas fa-search"></i></div>
+      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-2">
+        <button type="button" onclick="filterDeposits('pending')" id="dep-tab-pending" class="tab-pill on"><i class="fas fa-clock" style="font-size:9px"></i> Pending</button>
+        <button type="button" onclick="filterDeposits('approved')" id="dep-tab-approved" class="tab-pill"><i class="fas fa-check"></i> Approved</button>
+        <button type="button" onclick="filterDeposits('rejected')" id="dep-tab-rejected" class="tab-pill"><i class="fas fa-xmark"></i> Rejected</button>
+        <button type="button" onclick="filterDeposits('all')" id="dep-tab-all" class="tab-pill"><i class="fas fa-list"></i> All</button>
+      </div>
+      <div id="deposits-list"></div>
+    </section>
+
+    <!-- ORDERS -->
+    <section id="view-orders" class="hidden sect p-3">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#2563eb] to-[#6366f1] flex items-center justify-center text-white shadow-lg"><i class="fas fa-shopping-bag text-base"></i></div>
+        <div><h2 class="text-[17px] font-black text-[var(--ink)] f-display">Orders</h2><p class="text-[10.5px] text-[var(--muted)] font-medium">All top-up orders</p></div>
+      </div>
+      <div class="search-bar"><input type="text" id="ord-search" onkeyup="renderOrders()" placeholder="Search playerID, trxID, email..." class="inp"><i class="fas fa-search"></i></div>
+      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-2">
+        <button type="button" onclick="filterOrders('pending')" id="ord-tab-pending" class="tab-pill on"><i class="fas fa-clock"></i> Pending</button>
+        <button type="button" onclick="filterOrders('success')" id="ord-tab-success" class="tab-pill"><i class="fas fa-check"></i> Success</button>
+        <button type="button" onclick="filterOrders('cancelled')" id="ord-tab-cancelled" class="tab-pill"><i class="fas fa-ban"></i> Cancelled</button>
+        <button type="button" onclick="filterOrders('refunded')" id="ord-tab-refunded" class="tab-pill"><i class="fas fa-rotate-left"></i> Refunded</button>
+        <button type="button" onclick="filterOrders('all')" id="ord-tab-all" class="tab-pill"><i class="fas fa-list"></i> All</button>
+      </div>
+      <div id="orders-list"></div>
+    </section>
+
+    <!-- USERS -->
+    <section id="view-users" class="hidden sect p-3">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#a855f7] flex items-center justify-center text-white shadow-lg"><i class="fas fa-users text-base"></i></div>
+          <div><h2 class="text-[17px] font-black text-[var(--ink)] f-display">Users</h2><p class="text-[10.5px] text-[var(--muted)] font-medium">All registered</p></div>
+        </div>
+        <button type="button" onclick="openCreateUser()" class="btn btn-brand btn-sm"><i class="fas fa-plus"></i> Add</button>
+      </div>
+      <div class="search-bar"><input type="text" id="user-search" onkeyup="searchUser()" placeholder="Search name, email, phone..." class="inp"><i class="fas fa-search"></i></div>
+      <div id="users-list"></div>
+    </section>
+
+    <!-- CATEGORIES -->
+    <section id="view-categories" class="hidden sect p-3">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#ec4899] to-[#be185d] flex items-center justify-center text-white shadow-lg"><i class="fas fa-layer-group text-base"></i></div>
+        <div><h2 class="text-[17px] font-black text-[var(--ink)] f-display">Categories</h2><p class="text-[10.5px] text-[var(--muted)] font-medium">Organize</p></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon"><i class="fas fa-plus"></i></span> Create Category</div>
+        <div class="field"><label class="field-label">Name</label><input type="text" id="cat-name" placeholder="e.g. Free Fire" class="inp"></div>
+        <button type="button" onclick="addCategory()" class="btn btn-brand btn-full"><i class="fas fa-plus"></i> Add</button>
+      </div>
+      <div class="section-header"><div class="section-header-left"><div class="section-header-bar"></div><span class="section-header-txt">All Categories</span></div><span class="section-header-cnt" id="cat-count">0</span></div>
+      <div id="categories-list" class="reorder-list"></div>
+    </section>
+
+    <!-- PRODUCTS -->
+    <section id="view-products" class="hidden sect p-3">
+      <div id="products-main-view">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#2563eb] to-[#6366f1] flex items-center justify-center text-white shadow-lg"><i class="fas fa-gamepad text-base"></i></div>
+            <div><h2 class="text-[17px] font-black text-[var(--ink)] f-display">Games</h2><p class="text-[10.5px] text-[var(--muted)] font-medium">By category</p></div>
+          </div>
+          <button type="button" onclick="openCreateProduct()" class="btn btn-brand btn-sm"><i class="fas fa-plus"></i> Add</button>
+        </div>
+        <div id="products-grid-list"></div>
+      </div>
+      <div id="packages-manager-view" class="hidden">
+        <div class="card flex items-center gap-3">
+          <button type="button" onclick="closePackagesView()" class="btn btn-icon-sm" style="background:#f1f5f9;color:var(--muted)"><i class="fas fa-arrow-left"></i></button>
+          <div class="min-w-0 flex-1">
+            <h3 id="pm-game-title" class="font-extrabold text-[var(--ink)] text-sm truncate f-display">Game</h3>
+            <p class="text-[9.5px] text-[var(--brand)] font-bold uppercase tracking-widest flex items-center gap-1.5 mt-0.5"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full live-dot"></span> Live Packages</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="card-title-icon"><i class="fas fa-box-open"></i></span> Add Package</div>
+          <div class="field"><label class="field-label">Name</label><input type="text" id="pkg-name" placeholder="100 Diamonds" class="inp"></div>
+          <div class="field"><label class="field-label">Price (৳)</label><input type="number" id="pkg-price" placeholder="0" class="inp"></div>
+          <div class="field"><label class="field-label">Icon URL</label><input type="text" id="pkg-icon" placeholder="Auto if empty" class="inp"></div>
+          <button type="button" id="pkg-add-btn" onclick="addPackage()" class="btn btn-brand btn-full"><i class="fas fa-plus"></i> Add</button>
+        </div>
+        <div class="section-header"><div class="section-header-left"><div class="section-header-bar"></div><span class="section-header-txt">All Packages</span></div><span class="section-header-cnt" id="pkg-count">0</span></div>
+        <div id="packages-list"></div>
+      </div>
+    </section>
+
+    <!-- BANNERS -->
+    <section id="view-banners" class="hidden sect p-3">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#a855f7] to-[#7c3aed] flex items-center justify-center text-white shadow-lg"><i class="fas fa-images text-base"></i></div>
+        <div><h2 class="text-[17px] font-black text-[var(--ink)] f-display">Banners</h2><p class="text-[10.5px] text-[var(--muted)] font-medium">Slider</p></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon"><i class="fas fa-plus"></i></span> Add Banner</div>
+        <div class="field"><label class="field-label">Image URL</label><input type="text" id="banner-url" placeholder="https://..." class="inp"></div>
+        <div class="field"><label class="field-label">Click Link</label><input type="text" id="banner-link" placeholder="https://..." class="inp"></div>
+        <button type="button" onclick="addBanner()" class="btn btn-brand btn-full"><i class="fas fa-plus"></i> Add</button>
+      </div>
+      <div class="section-header"><div class="section-header-left"><div class="section-header-bar"></div><span class="section-header-txt">All Banners</span></div></div>
+      <div id="banners-list"></div>
+    </section>
+
+    <!-- RANKS -->
+    <section id="view-ranks" class="hidden sect p-3">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#f59e0b] to-[#b45309] flex items-center justify-center text-white shadow-lg"><i class="fas fa-medal text-base"></i></div>
+        <div><h2 class="text-[17px] font-black text-[var(--ink)] f-display">Ranks</h2><p class="text-[10.5px] text-[var(--muted)] font-medium">Tier system</p></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon"><i class="fas fa-plus"></i></span> Add Rank</div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="field"><label class="field-label">Name</label><input type="text" id="rk-name" placeholder="Bronze" class="inp"></div>
+          <div class="field"><label class="field-label">FA Icon</label><input type="text" id="rk-icon" placeholder="fa-medal" class="inp"></div>
+          <div class="field"><label class="field-label">Min (৳)</label><input type="number" id="rk-min" placeholder="0" class="inp"></div>
+          <div class="field"><label class="field-label">Max (৳)</label><input type="number" id="rk-max" placeholder="1000" class="inp"></div>
+        </div>
+        <div class="field"><label class="field-label">Tagline</label><input type="text" id="rk-tagline" placeholder="Short description" class="inp"></div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="field"><label class="field-label">Color</label><input type="text" id="rk-color" value="#f59e0b" class="inp"></div>
+          <div class="field"><label class="field-label">PNG URL</label><input type="text" id="rk-png" placeholder="https://..." class="inp"></div>
+        </div>
+        <button type="button" onclick="addRank()" class="btn btn-brand btn-full"><i class="fas fa-plus"></i> Add</button>
+      </div>
+      <div class="section-header"><div class="section-header-left"><div class="section-header-bar"></div><span class="section-header-txt">All Ranks</span></div><span class="section-header-cnt" id="ranks-count">0</span></div>
+      <div id="ranks-list"></div>
+    </section>
+
+    <!-- CODES -->
+    <section id="view-codes" class="hidden sect p-3">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#10b981] to-[#047857] flex items-center justify-center text-white shadow-lg"><i class="fas fa-ticket-alt text-base"></i></div>
+        <div><h2 class="text-[17px] font-black text-[var(--ink)] f-display">Codes</h2><p class="text-[10.5px] text-[var(--muted)] font-medium">Redeem codes</p></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon"><i class="fas fa-plus"></i></span> Generate</div>
+        <div class="field"><label class="field-label">Code</label><input type="text" id="code-value" placeholder="SYL100" class="inp uppercase mono"></div>
+        <div class="field"><label class="field-label">Amount (৳)</label><input type="number" id="code-amount" placeholder="0" class="inp"></div>
+        <button type="button" onclick="addRedeemCode()" class="btn btn-brand btn-full"><i class="fas fa-plus"></i> Generate</button>
+      </div>
+      <div class="section-header"><div class="section-header-left"><div class="section-header-bar"></div><span class="section-header-txt">All Codes</span></div></div>
+      <div id="codes-list"></div>
+    </section>
+
+    <!-- SETTINGS - PAYMENT -->
+    <section id="view-settings-payment" class="hidden sect p-3">
+      <div class="flex items-center gap-3 mb-3"><button type="button" onclick="navTo('dashboard')" class="btn btn-icon-sm" style="background:#fff"><i class="fas fa-arrow-left"></i></button><h2 class="text-base font-black f-display">Payment Settings</h2></div>
+      <div class="flex gap-2 mb-3">
+        <button type="button" onclick="switchPayTab('bkash')" id="ptab-bkash" class="tab-pill on" style="flex:1;justify-content:center">bKash</button>
+        <button type="button" onclick="switchPayTab('nagad')" id="ptab-nagad" class="tab-pill" style="flex:1;justify-content:center">Nagad</button>
+        <button type="button" onclick="switchPayTab('rocket')" id="ptab-rocket" class="tab-pill" style="flex:1;justify-content:center">Rocket</button>
+      </div>
+      <div id="pay-panel-bkash">
+        <div class="card"><div class="field"><label class="field-label">bKash Number</label><input type="text" id="set-bkash" placeholder="01XXXXXXXXX" class="inp"></div></div>
+        <div class="card"><div class="field"><label class="field-label">QR URL</label><input type="text" id="set-bkash-qr" class="inp"></div><div class="qr-preview" id="preview-bkash-qr"><span class="img-hint">No QR</span></div></div>
+        <div class="card"><div class="field"><label class="field-label">Instructions (one per line)</label><textarea id="set-bkash-inst" rows="5" class="inp"></textarea></div></div>
+      </div>
+      <div id="pay-panel-nagad" class="hidden">
+        <div class="card"><div class="field"><label class="field-label">Nagad Number</label><input type="text" id="set-nagad" class="inp"></div></div>
+        <div class="card"><div class="field"><label class="field-label">QR URL</label><input type="text" id="set-nagad-qr" class="inp"></div><div class="qr-preview" id="preview-nagad-qr"><span class="img-hint">No QR</span></div></div>
+        <div class="card"><div class="field"><label class="field-label">Instructions</label><textarea id="set-nagad-inst" rows="5" class="inp"></textarea></div></div>
+      </div>
+      <div id="pay-panel-rocket" class="hidden">
+        <div class="card"><div class="field"><label class="field-label">Rocket Number</label><input type="text" id="set-rocket" class="inp"></div></div>
+        <div class="card"><div class="field"><label class="field-label">QR URL</label><input type="text" id="set-rocket-qr" class="inp"></div><div class="qr-preview" id="preview-rocket-qr"><span class="img-hint">No QR</span></div></div>
+        <div class="card"><div class="field"><label class="field-label">Instructions</label><textarea id="set-rocket-inst" rows="5" class="inp"></textarea></div></div>
+      </div>
+      <button type="button" onclick="savePayment()" class="btn btn-brand btn-full"><i class="fas fa-save"></i> Save All</button>
+    </section>
+
+    <!-- SETTINGS - PLAYER API -->
+    <section id="view-settings-playerapi" class="hidden sect p-3">
+      <div class="flex items-center gap-3 mb-3"><button type="button" onclick="navTo('dashboard')" class="btn btn-icon-sm" style="background:#fff"><i class="fas fa-arrow-left"></i></button><h2 class="text-base font-black f-display">Player API</h2></div>
+      <div class="card">
+        <div class="field"><label class="field-label">API URL</label><input type="text" id="set-api-url" placeholder="https://api.com/player?uid=" class="inp"></div>
+        <div class="field"><label class="field-label">Method</label><select id="set-api-method" class="inp"><option value="GET">GET</option><option value="POST">POST</option></select></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon"><i class="fas fa-map-signs"></i></span> Field Mapping</div>
+        <div class="field"><label class="field-label">Name Path *</label><input type="text" id="set-api-name-path" placeholder="player.name" class="inp"></div>
+        <div class="field"><label class="field-label">Level Path</label><input type="text" id="set-api-level-path" placeholder="player.level" class="inp"></div>
+        <div class="field"><label class="field-label">Likes Path</label><input type="text" id="set-api-likes-path" placeholder="player.likes" class="inp"></div>
+        <div class="field"><label class="field-label">Diamonds Path</label><input type="text" id="set-api-diamonds-path" placeholder="player.diamonds" class="inp"></div>
+        <div class="field"><label class="field-label">EXP Path</label><input type="text" id="set-api-exp-path" placeholder="player.exp" class="inp"></div>
+        <button type="button" onclick="savePlayerApi()" class="btn btn-brand btn-full"><i class="fas fa-save"></i> Save</button>
+      </div>
+      <div class="card" style="background:linear-gradient(135deg,#e0f2fe,#bae6fd);border-color:#7dd3fc">
+        <div class="card-title" style="color:#0369a1"><span class="card-title-icon" style="background:#fff;color:#0369a1"><i class="fas fa-flask"></i></span> Test API</div>
+        <div class="field"><label class="field-label">Test UID</label><input type="text" id="api-test-uid" class="inp" value="8674177274"></div>
+        <button type="button" onclick="testPlayerApi()" class="btn btn-primary btn-full"><i class="fas fa-play"></i> Run Test</button>
+        <div id="api-test-result" class="hidden"></div>
+      </div>
+    </section>
+
+    <!-- SETTINGS - ACCOUNT VALUE -->
+    <section id="view-settings-accountval" class="hidden sect p-3">
+      <div class="flex items-center gap-3 mb-3"><button type="button" onclick="navTo('dashboard')" class="btn btn-icon-sm" style="background:#fff"><i class="fas fa-arrow-left"></i></button><h2 class="text-base font-black f-display">AVC Pricing</h2></div>
+      <div class="card">
+        <div class="field"><label class="field-label">Base Price (৳)</label><input type="number" id="set-acc-base" class="inp" step="0.01"></div>
+        <div class="field"><label class="field-label">Per Level (৳)</label><input type="number" id="set-acc-level-price" class="inp" step="0.01"></div>
+        <div class="field"><label class="field-label">Per Like (৳)</label><input type="number" id="set-acc-like-price" class="inp" step="0.01"></div>
+        <div class="field"><label class="field-label">Per Diamond (৳)</label><input type="number" id="set-acc-diamond-price" class="inp" step="0.01"></div>
+        <button type="button" onclick="saveAccountVal()" class="btn btn-brand btn-full"><i class="fas fa-save"></i> Save</button>
+      </div>
+    </section>
+
+    <!-- SETTINGS - GENERAL -->
+    <section id="view-settings-general" class="hidden sect p-3">
+      <div class="flex items-center gap-3 mb-3"><button type="button" onclick="navTo('dashboard')" class="btn btn-icon-sm" style="background:#fff"><i class="fas fa-arrow-left"></i></button><h2 class="text-base font-black f-display">General Config</h2></div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon"><i class="fas fa-signature"></i></span> Site Info</div>
+        <div class="field"><label class="field-label">Site Name</label><input type="text" id="set-site-name" class="inp"></div>
+        <div class="field"><label class="field-label">Tagline</label><input type="text" id="set-tagline" class="inp"></div>
+        <div class="field"><label class="field-label">Support Email</label><input type="text" id="set-email" class="inp"></div>
+        <button type="button" onclick="saveSiteInfo()" class="btn btn-brand btn-full"><i class="fas fa-save"></i> Save</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon"><i class="fas fa-image"></i></span> Logos</div>
+        <div class="field"><label class="field-label">Login Image</label></div>
+        <div id="preview-login-img" class="img-preview-box"><span class="img-hint">No image</span></div>
+        <input type="text" id="set-user-login-url" class="inp mb-3">
+        <div class="field"><label class="field-label">Home Logo</label></div>
+        <div id="preview-home-img" class="img-preview-box"><span class="img-hint">No logo</span></div>
+        <input type="text" id="set-user-logo-url" class="inp">
+        <div class="field" style="margin-top:12px"><label class="field-label">Wallet Pay Logo</label></div>
+        <div id="preview-wallet-logo" class="img-preview-box"><span class="img-hint">No image</span></div>
+        <input type="text" id="set-wallet-logo" class="inp mb-3">
+        <div class="field"><label class="field-label">Instant Pay Logo</label></div>
+        <div id="preview-instant-logo" class="img-preview-box"><span class="img-hint">No image</span></div>
+        <input type="text" id="set-instant-logo" class="inp">
+        <div class="field" style="margin-top:12px"><label class="field-label">bKash Logo</label></div>
+        <div id="preview-logo-bkash" class="img-preview-box" style="min-height:60px"><span class="img-hint">No image</span></div>
+        <input type="text" id="set-logo-bkash" class="inp mb-2">
+        <div class="field"><label class="field-label">Nagad Logo</label></div>
+        <div id="preview-logo-nagad" class="img-preview-box" style="min-height:60px"><span class="img-hint">No image</span></div>
+        <input type="text" id="set-logo-nagad" class="inp mb-2">
+        <div class="field"><label class="field-label">Rocket Logo</label></div>
+        <div id="preview-logo-rocket" class="img-preview-box" style="min-height:60px"><span class="img-hint">No image</span></div>
+        <input type="text" id="set-logo-rocket" class="inp">
+        <button type="button" onclick="saveBranding()" class="btn btn-brand btn-full" style="margin-top:12px"><i class="fas fa-save"></i> Save Logos</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon"><i class="fas fa-share-nodes"></i></span> Social Links</div>
+        <div class="field"><label class="field-label">Telegram Channel</label><input type="text" id="set-telegram" class="inp"></div>
+        <div class="field"><label class="field-label">Telegram Group</label><input type="text" id="set-group-link" class="inp"></div>
+        <div class="field"><label class="field-label">YouTube</label><input type="text" id="set-yt" class="inp"></div>
+        <button type="button" onclick="saveSocial()" class="btn btn-brand btn-full"><i class="fas fa-save"></i> Save</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <button type="button" onclick="navTo('dashboard')" class="nvi on" id="nav-dashboard"><i class="fas fa-chart-pie ni"></i><span>Home</span></button>
+      <button type="button" onclick="navTo('orders')" class="nvi" id="nav-orders"><i class="fas fa-shopping-bag ni"></i><span>Orders</span></button>
+      <button type="button" onclick="navTo('users')" class="nvi" id="nav-users"><i class="fas fa-users ni"></i><span>Users</span></button>
+      <button type="button" onclick="navTo('deposits')" class="nvi" id="nav-deposits"><i class="fas fa-wallet ni"></i><span>Deposits</span></button>
+      <button type="button" onclick="navTo('categories')" class="nvi" id="nav-categories"><i class="fas fa-layer-group ni"></i><span>Content</span></button>
+    </div>
+  </nav>
+</div>
+
+<!-- ═══════════════ MODALS ═══════════════ -->
+
+<!-- CREATE PRODUCT -->
+<div id="create-product-modal" class="hidden modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header"><div class="modal-title"><span class="modal-title-icon"><i class="fas fa-plus-circle"></i></span> Create Game</div><button type="button" onclick="closeCreateProduct()" class="modal-close"><i class="fas fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="field"><label class="field-label">Name *</label><input type="text" id="cp-name" class="inp"></div>
+      <div class="field"><label class="field-label">Image URL *</label><input type="text" id="cp-image" class="inp"></div>
+      <div class="field"><label class="field-label">Category *</label><div id="cp-cat-selector" class="cat-selector"></div></div>
+      <div class="field"><label class="field-label">Input Label</label><input type="text" id="cp-input-label" class="inp" placeholder="Player ID"></div>
+      <div class="field"><label class="field-label">Input Placeholder</label><input type="text" id="cp-input-placeholder" class="inp"></div>
+      <div class="field"><label class="field-label">Rules (one per line)</label><textarea id="cp-rules" rows="3" class="inp"></textarea></div>
+    </div>
+    <div class="modal-footer"><button type="button" onclick="closeCreateProduct()" class="btn btn-ghost">Cancel</button><button type="button" id="cp-submit-btn" onclick="submitCreateProduct()" class="btn btn-brand"><i class="fas fa-check"></i> Create</button></div>
+  </div>
+</div>
+
+<!-- EDIT PRODUCT -->
+<div id="edit-product-modal" class="hidden modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header"><div class="modal-title"><span class="modal-title-icon"><i class="fas fa-pen"></i></span> Edit Product</div><button type="button" onclick="closeEditProduct()" class="modal-close"><i class="fas fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="ep-id">
+      <div class="field"><label class="field-label">Name</label><input type="text" id="ep-name" class="inp"></div>
+      <div class="field"><label class="field-label">Image URL</label><input type="text" id="ep-image" class="inp"></div>
+      <div class="field"><label class="field-label">Input Label</label><input type="text" id="ep-input-label" class="inp"></div>
+      <div class="field"><label class="field-label">Input Placeholder</label><input type="text" id="ep-input-placeholder" class="inp"></div>
+      <div class="field"><label class="field-label">Rules</label><textarea id="ep-rules" rows="3" class="inp"></textarea></div>
+    </div>
+    <div class="modal-footer"><button type="button" onclick="closeEditProduct()" class="btn btn-ghost">Cancel</button><button type="button" onclick="saveEditProduct()" class="btn btn-brand"><i class="fas fa-save"></i> Save</button></div>
+  </div>
+</div>
+
+<!-- CREATE USER -->
+<div id="create-user-modal" class="hidden modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header"><div class="modal-title"><span class="modal-title-icon"><i class="fas fa-user-plus"></i></span> Create User</div><button type="button" onclick="closeCreateUser()" class="modal-close"><i class="fas fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="field"><label class="field-label">Name</label><input type="text" id="new-user-name" class="inp"></div>
+      <div class="field"><label class="field-label">Email</label><input type="email" id="new-user-email" class="inp"></div>
+      <div class="field"><label class="field-label">Phone</label><input type="tel" id="new-user-phone" class="inp"></div>
+      <div class="field"><label class="field-label">Password</label><input type="text" id="new-user-pass" class="inp"></div>
+      <div class="field"><label class="field-label">Initial Balance (৳)</label><input type="number" id="new-user-balance" value="0" class="inp"></div>
+    </div>
+    <div class="modal-footer"><button type="button" onclick="closeCreateUser()" class="btn btn-ghost">Cancel</button><button type="button" onclick="createUser()" class="btn btn-brand"><i class="fas fa-check"></i> Create</button></div>
+  </div>
+</div>
+
+<!-- USER DETAILS -->
+<div id="user-modal" class="hidden modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header"><div class="modal-title"><span class="modal-title-icon"><i class="fas fa-user"></i></span> User Details</div><button type="button" onclick="closeUserModal()" class="modal-close"><i class="fas fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="text-center mb-4">
+        <div class="w-20 h-20 mx-auto mb-3 rounded-3xl bg-gradient-to-br from-[#2563eb] to-[#6366f1] flex items-center justify-center text-white font-black text-3xl shadow-xl overflow-hidden" id="m-avatar-wrap"><span>U</span></div>
+        <h3 id="m-name" class="text-lg font-black f-display">User</h3>
+        <p id="m-email" class="text-[11px] text-[var(--muted)] break-all mt-0.5"></p>
+        <p id="m-phone" class="text-[11px] text-[var(--muted)] mt-0.5"></p>
+        <div class="mt-2 flex flex-wrap justify-center gap-1">
+          <span class="id-badge usr"><i class="fas fa-fingerprint" style="font-size:8px"></i> <span id="m-uid">...</span></span>
+          <span class="id-badge code" onclick="regeneratePin()" style="cursor:pointer"><i class="fas fa-key" style="font-size:8px"></i> PIN: <span id="m-pin">-</span></span>
+          <span class="id-badge dep" id="m-rank-badge"><i class="fas fa-medal" style="font-size:8px"></i> <span id="m-rank">Bronze</span></span>
+        </div>
+        <div class="flex justify-center gap-1.5 mt-2">
+          <span id="m-badge-verified" class="badge badge-info hidden"><i class="fas fa-check-circle"></i> Verified</span>
+          <span id="m-badge-premium" class="badge badge-warn hidden"><i class="fas fa-crown"></i> Premium</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-4 gap-1.5 mb-4">
+        <div class="stat-mini"><small>Balance</small><b id="m-balance" style="color:var(--brand)">0</b></div>
+        <div class="stat-mini"><small>Orders</small><b id="m-orders">0</b></div>
+        <div class="stat-mini"><small>Spend</small><b id="m-spent">0</b></div>
+        <div class="stat-mini"><small>Weekly</small><b id="m-weekly">0</b></div>
+      </div>
+
+      <div class="tabs-detail" id="user-tabs">
+        <button type="button" onclick="switchUserTab('actions')" class="on" id="utab-actions">Actions</button>
+        <button type="button" onclick="switchUserTab('orders')" id="utab-orders">Orders</button>
+        <button type="button" onclick="switchUserTab('deposits')" id="utab-deposits">Deposits</button>
+      </div>
+
+      <div id="utab-content-actions">
+        <div class="bg-[#f8fafc] border border-[var(--line)] rounded-2xl p-3.5 mb-3">
+          <p class="text-[10px] font-black text-[var(--ink2)] uppercase mb-2.5"><i class="fas fa-shield-halved text-[var(--brand)]"></i> Badges</p>
+          <div class="flex items-center justify-between mb-2"><span class="text-[12px] font-bold">Verified</span><label class="toggle-switch"><input type="checkbox" id="m-verified-toggle"><span class="track"></span></label></div>
+          <div class="flex items-center justify-between"><span class="text-[12px] font-bold">Premium</span><label class="toggle-switch"><input type="checkbox" id="m-premium-toggle"><span class="track"></span></label></div>
+        </div>
+        <div class="bg-[#f8fafc] border border-[var(--line)] rounded-2xl p-3.5 mb-3">
+          <p class="text-[10px] font-black text-[var(--ink2)] uppercase mb-2.5"><i class="fas fa-wallet text-[var(--brand)]"></i> Balance</p>
+          <input type="number" id="bal-amount" placeholder="Amount" class="inp mb-2">
+          <input type="text" id="bal-reason" placeholder="Reason (optional)" class="inp mb-2">
+          <div class="grid grid-cols-2 gap-2"><button type="button" onclick="updateBalance(1)" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Add</button><button type="button" onclick="updateBalance(-1)" class="btn btn-danger btn-sm"><i class="fas fa-minus"></i> Remove</button></div>
+        </div>
+        <div class="bg-[#f8fafc] border border-[var(--line)] rounded-2xl p-3.5 mb-3">
+          <p class="text-[10px] font-black text-[var(--ink2)] uppercase mb-2.5"><i class="fas fa-pen text-blue-500"></i> Edit Info</p>
+          <div class="field"><label class="field-label">Profile Pic</label><input type="text" id="edit-user-pic" class="inp"></div>
+          <div class="field"><label class="field-label">Name</label><input type="text" id="edit-user-name" class="inp"></div>
+          <div class="field"><label class="field-label">Phone</label><input type="text" id="edit-user-phone" class="inp"></div>
+          <button type="button" onclick="saveUserInfo()" class="btn btn-primary btn-full"><i class="fas fa-save"></i> Save</button>
+        </div>
+        <div class="bg-[#f8fafc] border border-[var(--line)] rounded-2xl p-3.5 mb-3">
+          <p class="text-[10px] font-black text-[var(--ink2)] uppercase mb-2.5"><i class="fas fa-key text-amber-500"></i> Security</p>
+          <button type="button" onclick="resetUserPassword()" class="btn btn-warn btn-sm btn-full mb-2"><i class="fas fa-envelope"></i> Send Password Reset Email</button>
+          <button type="button" onclick="resetWeeklySpend()" class="btn btn-subtle btn-sm btn-full"><i class="fas fa-rotate"></i> Reset Weekly Spend</button>
+        </div>
+        <button type="button" onclick="deleteUser()" class="btn btn-danger btn-full"><i class="fas fa-trash"></i> Delete User (Cascade)</button>
+      </div>
+
+      <div id="utab-content-orders" class="hidden">
+        <div id="user-orders-list"></div>
+      </div>
+
+      <div id="utab-content-deposits" class="hidden">
+        <div id="user-deposits-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div id="confirm-modal" class="hidden modal-overlay center">
+  <div class="modal-content center">
+    <div class="modal-body text-center">
+      <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center"><i class="fas fa-triangle-exclamation text-red-500 text-2xl"></i></div>
+      <h3 id="confirm-title" class="text-base font-black f-display mb-2">Are you sure?</h3>
+      <p id="confirm-msg" class="text-xs text-[var(--muted)] mb-4 font-medium"></p>
+      <div class="grid grid-cols-2 gap-2.5"><button type="button" onclick="closeConfirm()" class="btn btn-ghost">Cancel</button><button type="button" id="confirm-yes" class="btn btn-danger">Confirm</button></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin-script.js" defer></script>
+</body>
+</html>
