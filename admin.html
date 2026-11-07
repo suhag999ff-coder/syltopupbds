@@ -8,11 +8,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<script defer src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 <link rel="stylesheet" href="admin-style.css">
 </head>
 <body class="select-none">
@@ -464,6 +464,24 @@
         <button type="button" onclick="saveSocial()" class="btn btn-brand btn-full"><i class="fas fa-save"></i> Save</button>
       </div>
     </section>
+    <!-- NOTIFICATIONS -->
+    <section id="view-notifications" class="hidden sect p-3">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-600 to-blue-500 flex items-center justify-center text-white shadow-lg"><i class="fas fa-bell"></i></div>
+        <div><h2 class="text-base font-black f-display">User Notifications</h2><p class="text-xs text-[var(--muted)]">Send messages to users in their panel</p></div>
+      </div>
+      <div class="card mb-4">
+        <div class="field mb-3"><label class="field-label">Notification Title</label><input id="notify-title" class="inp" maxlength="100" placeholder="e.g. Topup order update"></div>
+        <div class="field mb-3"><label class="field-label">Message</label><textarea id="notify-message" class="inp" rows="4" maxlength="1000" placeholder="Write your message for users..."></textarea></div>
+        <div class="field mb-3"><label class="field-label">Send To</label><select id="notify-target" class="inp"><option value="all">All users</option><option value="user">Specific user</option></select></div>
+        <div class="field mb-3 hidden" id="notify-user-wrap"><label class="field-label">Select user</label><select id="notify-user" class="inp"><option value="">Choose user...</option></select></div>
+        <button type="button" onclick="sendAdminNotification()" class="btn btn-brand btn-full"><i class="fas fa-paper-plane"></i> Send Notification</button>
+        <p class="text-xs mt-3" style="color:var(--muted)">Messages appear in the user's Notification Inbox after they sign in. This is an in-panel inbox, not browser push.</p>
+      </div>
+      <div class="section-header"><div class="section-header-left"><div class="section-header-bar"></div><span class="section-header-txt">Recent Notifications</span></div></div>
+      <div id="admin-notifications-list"><div class="text-xs p-3" style="color:var(--muted)">Loading notifications…</div></div>
+    </section>
+
   </main>
 
   <nav class="bottom-nav">
@@ -473,6 +491,7 @@
       <button type="button" onclick="navTo('users')" class="nvi" id="nav-users"><i class="fas fa-users ni"></i><span>Users</span></button>
       <button type="button" onclick="navTo('deposits')" class="nvi" id="nav-deposits"><i class="fas fa-wallet ni"></i><span>Deposits</span></button>
       <button type="button" onclick="navTo('categories')" class="nvi" id="nav-categories"><i class="fas fa-layer-group ni"></i><span>Content</span></button>
+      <button type="button" onclick="navTo('notifications')" class="nvi" id="nav-notifications"><i class="fas fa-bell ni"></i><span>Notify</span></button>
     </div>
   </nav>
 </div>

@@ -90,6 +90,27 @@ function togglePass(id,btn){
 }
 function adminLogout(){ Swal.fire({title:'Log Out?',icon:'question',showCancelButton:true,confirmButtonText:'Yes',confirmButtonColor:'#2563eb'}).then(r=>{if(r.isConfirmed)auth.signOut().then(()=>location.reload());}); }
 
+function sendAdminNotification(){
+  const title=$('notify-title').value.trim(), body=$('notify-message').value.trim();
+  const target=$('notify-target').value, targetUid=target==='user'?$('notify-user').value:'';
+  if(!title||!body) return Swal.fire('Missing information','Enter a title and message first.','warning');
+  if(target==='user'&&!targetUid) return Swal.fire('Select user','Choose the recipient user.','warning');
+  Swal.fire({title:'Send notification?',text:target==='all'?'This message will appear for all users.':'This message will appear for the selected user.',icon:'question',showCancelButton:true,confirmButtonText:'Send',confirmButtonColor:'#4f46e5'}).then(async result=>{
+    if(!result.isConfirmed) return;
+    try{
+      await db.collection('notifications').add({
+        title,body,audience:target==='all'?'all':'user',
+        targetUid:target==='user'?targetUid:null,
+        createdBy:auth.currentUser?auth.currentUser.uid:null,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      $('notify-title').value=''; $('notify-message').value='';
+      Swal.fire({icon:'success',title:'Notification sent',text:'It is now available in the user panel inbox.',timer:1800,showConfirmButton:false});
+    }catch(err){Swal.fire('Send failed',err.message,'error');}
+  });
+}
+$('notify-target')?.addEventListener('change',()=>{$('notify-user-wrap').classList.toggle('hidden',$('notify-target').value!=='user');});
+
 auth.onAuthStateChanged(user=>{
   if(Swal.isVisible()) Swal.close();
   if(user){
@@ -152,6 +173,12 @@ function startAllListeners(){
     allUsers=[];
     snap.forEach(doc=>allUsers.push(Object.assign({id:doc.id},doc.data())));
     allUsers.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    const recipient=$('notify-user');
+    if(recipient){
+      const selected=recipient.value;
+      recipient.innerHTML='<option value="">Choose user...</option>'+allUsers.map(u=>'<option value="'+esc(u.id)+'">'+esc(u.name||u.email||u.id)+' — '+esc(u.email||u.id)+'</option>').join('');
+      recipient.value=selected;
+    }
     setText('dash-users',allUsers.length);
     renderUsers(allUsers);
     if(currentUserView) refreshCurrentUserView();
@@ -213,6 +240,18 @@ function startAllListeners(){
     setText('kpi-codes',allCodes.filter(c=>!c.used).length);
     renderCodes();
   });
+
+  db.collection('notifications').orderBy('createdAt','desc').limit(30).onSnapshot(snap=>{
+    const box=$('admin-notifications-list'); if(!box) return;
+    if(snap.empty){box.innerHTML='<div class="text-xs p-3" style="color:var(--muted)">No notifications sent yet.</div>';return;}
+    box.innerHTML='';
+    snap.forEach(doc=>{
+      const n=doc.data();
+      const item=document.createElement('div'); item.className='card mb-2';
+      item.innerHTML='<div class="font-bold text-sm">'+esc(n.title||'Notification')+'</div><p class="text-xs mt-1" style="color:var(--muted)">'+esc(n.body||'')+'</p><div class="text-[10px] mt-2" style="color:var(--muted)">'+(n.audience==='all'?'All users':'Specific user')+' · '+esc(fmtDate(n.createdAt))+'</div>';
+      box.appendChild(item);
+    });
+  },err=>{const box=$('admin-notifications-list');if(box)box.textContent='Unable to load notifications: '+err.message;});
 
   db.collection('settings').doc('general').onSnapshot(doc=>{
     settingsData=doc.exists?doc.data():{};

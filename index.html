@@ -9,10 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Bengali:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -80,6 +80,7 @@
     <a class="logo" href="#" onclick="goHome();return false"><img src="Main logo.jpg" alt="SYL TOPUP BD" id="siteLogo"></a>
     <div class="hr">
       <div class="wallet" onclick="showSec('addmoney')"><svg class="i"><use href="#wal"/></svg><span id="hdrBalance">0</span>৳</div>
+      <button type="button" class="notify-bell" onclick="openNotificationInbox()" aria-label="Open notifications"><i class="fas fa-bell"></i><span id="notifyUnread" class="notify-unread hidden">0</span></button>
       <div class="avatar" id="avBtn" onclick="openAcc()"><div class="av-txt" id="avTxt">U</div></div>
     </div>
   </div>
@@ -485,6 +486,14 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- NOTIFICATION INBOX -->
+<div id="notificationInbox" class="notify-overlay hidden" onclick="if(event.target===this)closeNotificationInbox()">
+  <section class="notify-panel" role="dialog" aria-modal="true" aria-labelledby="notifyInboxTitle">
+    <header class="notify-panel-head"><div><h2 id="notifyInboxTitle">Notifications</h2><p>Updates and messages from SYL TOPUP BD</p></div><button type="button" onclick="closeNotificationInbox()" aria-label="Close"><i class="fas fa-times"></i></button></header>
+    <div id="user-notification-list" class="notify-list"><div class="notify-empty">Your messages will appear here.</div></div>
+  </section>
 </div>
 
 <script src="script.js" defer></script>

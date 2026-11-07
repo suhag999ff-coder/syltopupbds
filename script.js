@@ -24,6 +24,7 @@ let playerApiConfig = {};
 let accountPricing = {};
 let bannersList = [];
 let bannerIndex = 0, bannerTimer = null;
+let userNotifications=[], notificationUnsubs=[];
 
 // Checkout & Payment State
 let checkoutContext = 'addmoney'; // 'addmoney' or 'order'
@@ -93,7 +94,58 @@ auth.onAuthStateChanged(async user => {
 });
 
 /* ═══════════════════ LISTENERS ═══════════════════ */
+function notificationReadIds(){
+  try{return JSON.parse(localStorage.getItem('notify-read-'+(currentUser?.uid||''))||'[]');}catch(e){return [];}
+}
+function saveNotificationReadIds(ids){
+  try{localStorage.setItem('notify-read-'+(currentUser?.uid||''),JSON.stringify(ids.slice(-500)));}catch(e){}
+}
+function renderNotificationInbox(){
+  const box=$('user-notification-list'), badge=$('notifyUnread'); if(!box||!badge)return;
+  const readIds=notificationReadIds();
+  const unread=userNotifications.filter(n=>!readIds.includes(n.id)).length;
+  badge.textContent=unread>99?'99+':String(unread); badge.classList.toggle('hidden',unread===0);
+  box.innerHTML='';
+  if(!userNotifications.length){box.innerHTML='<div class="notify-empty">No notifications yet. Updates from the admin will appear here.</div>';return;}
+  userNotifications.forEach(n=>{
+    const item=document.createElement('article');item.className='notify-item'+(readIds.includes(n.id)?'':' unread');
+    const title=document.createElement('h3');title.textContent=n.title||'Notification';
+    const body=document.createElement('p');body.textContent=n.body||'';
+    const time=document.createElement('time');
+    const date=n.createdAt&&n.createdAt.toDate?n.createdAt.toDate():null;
+    time.textContent=date?date.toLocaleString('bn-BD',{dateStyle:'medium',timeStyle:'short'}):'Just now';
+    item.append(title,body,time);box.appendChild(item);
+  });
+}
+function startNotificationListeners(){
+  notificationUnsubs.forEach(unsub=>{try{unsub();}catch(e){}});notificationUnsubs=[];
+  userNotifications=[];
+  const mergeSnap=snap=>{
+    const map=new Map(userNotifications.map(n=>[n.id,n]));
+    snap.forEach(doc=>map.set(doc.id,Object.assign({id:doc.id},doc.data())));
+    userNotifications=Array.from(map.values()).sort((a,b)=>{
+      const at=a.createdAt&&a.createdAt.toDate?a.createdAt.toDate().getTime():0;
+      const bt=b.createdAt&&b.createdAt.toDate?b.createdAt.toDate().getTime():0;return bt-at;
+    }).slice(0,100);
+    renderNotificationInbox();
+  };
+  notificationUnsubs.push(db.collection('notifications').where('audience','==','all').onSnapshot(mergeSnap,err=>console.warn('Notifications listener:',err)));
+  notificationUnsubs.push(db.collection('notifications').where('targetUid','==',currentUser.uid).onSnapshot(mergeSnap,err=>console.warn('Personal notifications listener:',err)));
+}
+function openNotificationInbox(){
+  const overlay=$('notificationInbox');if(!overlay)return;
+  overlay.classList.remove('hidden');
+  const ids=userNotifications.map(n=>n.id);saveNotificationReadIds(Array.from(new Set(notificationReadIds().concat(ids))));
+  renderNotificationInbox();
+  document.body.style.overflow='hidden';
+}
+function closeNotificationInbox(){
+  const overlay=$('notificationInbox');if(overlay)overlay.classList.add('hidden');
+  document.body.style.overflow='';
+}
+
 function startListeners(){
+  startNotificationListeners();
   db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
     if(!doc.exists) return;
     userData = doc.data();
