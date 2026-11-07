@@ -1,11 +1,11 @@
 {
   "rewrites": [
     {
-      "source": "/admin",
+      "source": "/noyon",
       "destination": "/admin.html"
     },
     {
-      "source": "/admin/",
+      "source": "/noyon/",
       "destination": "/admin.html"
     }
   ]
