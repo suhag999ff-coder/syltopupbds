@@ -8,11 +8,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script defer src="https://cdn.tailwindcss.com"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 <link rel="stylesheet" href="admin-style.css">
 </head>
 <body class="select-none">
@@ -464,25 +464,55 @@
         <button type="button" onclick="saveSocial()" class="btn btn-brand btn-full"><i class="fas fa-save"></i> Save</button>
       </div>
     </section>
-    <!-- NOTIFICATIONS -->
-    <section id="view-notifications" class="hidden sect p-3">
-      <div class="flex items-center gap-3 mb-4">
-        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-600 to-blue-500 flex items-center justify-center text-white shadow-lg"><i class="fas fa-bell"></i></div>
-        <div><h2 class="text-base font-black f-display">User Notifications</h2><p class="text-xs text-[var(--muted)]">Send messages to users in their panel</p></div>
-      </div>
-      <div class="card mb-4">
-        <div class="field mb-3"><label class="field-label">Notification Title</label><input id="notify-title" class="inp" maxlength="100" placeholder="e.g. Topup order update"></div>
-        <div class="field mb-3"><label class="field-label">Message</label><textarea id="notify-message" class="inp" rows="4" maxlength="1000" placeholder="Write your message for users..."></textarea></div>
-        <div class="field mb-3"><label class="field-label">Send To</label><select id="notify-target" class="inp"><option value="all">All users</option><option value="user">Specific user</option></select></div>
-        <div class="field mb-3 hidden" id="notify-user-wrap"><label class="field-label">Select user</label><select id="notify-user" class="inp"><option value="">Choose user...</option></select></div>
-        <button type="button" onclick="sendAdminNotification()" class="btn btn-brand btn-full"><i class="fas fa-paper-plane"></i> Send Notification</button>
-        <p class="text-xs mt-3" style="color:var(--muted)">Messages appear in the user's Notification Inbox after they sign in. This is an in-panel inbox, not browser push.</p>
-      </div>
-      <div class="section-header"><div class="section-header-left"><div class="section-header-bar"></div><span class="section-header-txt">Recent Notifications</span></div></div>
-      <div id="admin-notifications-list"><div class="text-xs p-3" style="color:var(--muted)">Loading notifications…</div></div>
-    </section>
 
-  </main>
+
+    <!-- CREATOR NOTIFY PUSH CENTER -->
+    <section id="view-notifications" class="sect p-3 hidden">
+      <div class="welcome-card">
+        <div class="welcome-content">
+          <div class="welcome-avatar"><i class="fas fa-bell"></i></div>
+          <div class="welcome-body">
+            <p class="welcome-eyebrow">PUSH MESSAGING</p>
+            <h2 class="welcome-title">Notification Center</h2>
+            <div class="welcome-meta"><i class="fas fa-paper-plane"></i><span>Send to subscribed browsers on this registered website</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card mt-3">
+        <div class="card-title"><span class="card-title-icon"><i class="fas fa-key"></i></span> Creator Notify API Settings</div>
+        <div class="field"><label class="field-label">Creator Notify API Key (cn_live_…)</label>
+          <input type="password" id="creator-notify-key" class="inp" autocomplete="off" placeholder="Paste API key here">
+        </div>
+        <div class="field"><label class="field-label">API Server</label>
+          <input type="url" id="creator-notify-base" class="inp" value="https://creator-notify.ydh.workers.dev" placeholder="https://creator-notify.ydh.workers.dev">
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin:8px 0 12px">Key is stored in Firestore settings/creatorNotify. Protect this document with admin-only Firestore rules. Never expose it in the public user panel.</p>
+        <button type="button" onclick="saveCreatorNotifySettings()" class="btn btn-brand btn-full"><i class="fas fa-save"></i> Save API Settings</button>
+      </div>
+      <div class="card mt-3">
+        <div class="card-title"><span class="card-title-icon"><i class="fas fa-message"></i></span> Compose Notification</div>
+        <div class="field"><label class="field-label">Title</label><input id="creator-notify-title" class="inp" maxlength="80" value="SYL TOPUP BD"></div>
+        <div class="field"><label class="field-label">Message</label><textarea id="creator-notify-body" class="inp" rows="4" maxlength="1200" placeholder="Write an announcement, order update, offer, etc."></textarea></div>
+        <div class="field"><label class="field-label">Inbox Recipient</label>
+          <select id="creator-notify-recipient" class="inp">
+            <option value="all">All users (Inbox + Push)</option>
+          </select>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin:8px 0 12px">“All users” sends a Push to Creator Notify subscribers and saves the message to each user's Inbox. Selecting one user saves an Inbox message for that user; Creator Notify's API integration in this project only provides website-wide push sending.</p>
+        <button type="button" onclick="sendCreatorNotification()" class="btn btn-brand btn-full"><i class="fas fa-paper-plane"></i> Send Notification</button>
+        <div id="creator-notify-status" class="note hidden" style="margin-top:12px"></div>
+      </div>
+      <div class="card mt-3">
+        <div class="card-title"><span class="card-title-icon"><i class="fas fa-shield-halved"></i></span> Setup Checklist</div>
+        <ul style="font-size:12px;color:var(--muted);padding-left:18px;line-height:1.8">
+          <li>Register the exact topup-site domain in Creator Notify.</li>
+          <li>Deploy the included creator-notify-sw.js at the website root (HTTPS).</li>
+          <li>Users must opt in to browser notifications once.</li>
+          <li>Configure Firestore rules to restrict settings/creatorNotify to admins.</li>
+        </ul>
+      </div>
+    </section>
+\n  </main>
 
   <nav class="bottom-nav">
     <div class="bottom-nav-inner">

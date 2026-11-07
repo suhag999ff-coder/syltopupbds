@@ -24,7 +24,6 @@ let playerApiConfig = {};
 let accountPricing = {};
 let bannersList = [];
 let bannerIndex = 0, bannerTimer = null;
-let userNotifications=[], notificationUnsubs=[];
 
 // Checkout & Payment State
 let checkoutContext = 'addmoney'; // 'addmoney' or 'order'
@@ -94,58 +93,7 @@ auth.onAuthStateChanged(async user => {
 });
 
 /* ═══════════════════ LISTENERS ═══════════════════ */
-function notificationReadIds(){
-  try{return JSON.parse(localStorage.getItem('notify-read-'+(currentUser?.uid||''))||'[]');}catch(e){return [];}
-}
-function saveNotificationReadIds(ids){
-  try{localStorage.setItem('notify-read-'+(currentUser?.uid||''),JSON.stringify(ids.slice(-500)));}catch(e){}
-}
-function renderNotificationInbox(){
-  const box=$('user-notification-list'), badge=$('notifyUnread'); if(!box||!badge)return;
-  const readIds=notificationReadIds();
-  const unread=userNotifications.filter(n=>!readIds.includes(n.id)).length;
-  badge.textContent=unread>99?'99+':String(unread); badge.classList.toggle('hidden',unread===0);
-  box.innerHTML='';
-  if(!userNotifications.length){box.innerHTML='<div class="notify-empty">No notifications yet. Updates from the admin will appear here.</div>';return;}
-  userNotifications.forEach(n=>{
-    const item=document.createElement('article');item.className='notify-item'+(readIds.includes(n.id)?'':' unread');
-    const title=document.createElement('h3');title.textContent=n.title||'Notification';
-    const body=document.createElement('p');body.textContent=n.body||'';
-    const time=document.createElement('time');
-    const date=n.createdAt&&n.createdAt.toDate?n.createdAt.toDate():null;
-    time.textContent=date?date.toLocaleString('bn-BD',{dateStyle:'medium',timeStyle:'short'}):'Just now';
-    item.append(title,body,time);box.appendChild(item);
-  });
-}
-function startNotificationListeners(){
-  notificationUnsubs.forEach(unsub=>{try{unsub();}catch(e){}});notificationUnsubs=[];
-  userNotifications=[];
-  const mergeSnap=snap=>{
-    const map=new Map(userNotifications.map(n=>[n.id,n]));
-    snap.forEach(doc=>map.set(doc.id,Object.assign({id:doc.id},doc.data())));
-    userNotifications=Array.from(map.values()).sort((a,b)=>{
-      const at=a.createdAt&&a.createdAt.toDate?a.createdAt.toDate().getTime():0;
-      const bt=b.createdAt&&b.createdAt.toDate?b.createdAt.toDate().getTime():0;return bt-at;
-    }).slice(0,100);
-    renderNotificationInbox();
-  };
-  notificationUnsubs.push(db.collection('notifications').where('audience','==','all').onSnapshot(mergeSnap,err=>console.warn('Notifications listener:',err)));
-  notificationUnsubs.push(db.collection('notifications').where('targetUid','==',currentUser.uid).onSnapshot(mergeSnap,err=>console.warn('Personal notifications listener:',err)));
-}
-function openNotificationInbox(){
-  const overlay=$('notificationInbox');if(!overlay)return;
-  overlay.classList.remove('hidden');
-  const ids=userNotifications.map(n=>n.id);saveNotificationReadIds(Array.from(new Set(notificationReadIds().concat(ids))));
-  renderNotificationInbox();
-  document.body.style.overflow='hidden';
-}
-function closeNotificationInbox(){
-  const overlay=$('notificationInbox');if(overlay)overlay.classList.add('hidden');
-  document.body.style.overflow='';
-}
-
 function startListeners(){
-  startNotificationListeners();
   db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
     if(!doc.exists) return;
     userData = doc.data();
@@ -852,7 +800,7 @@ async function submitRedeem(){
 
 /* ═══════════════════ NAVIGATION ═══════════════════ */
 function showSec(id){
-  const views = ['homeView', 'productView', 'ordersView', 'addmoneyView', 'paymentView', 'codesView', 'accountView'];
+  const views = ['homeView', 'productView', 'ordersView', 'addmoneyView', 'paymentView', 'codesView', 'accountView', 'notificationsView'];
   views.forEach(v => {
     const el = $(v);
     if(el) el.classList.add('hidden');
@@ -873,8 +821,69 @@ function showSec(id){
   if(id === 'orders') loadOrders();
   if(id === 'codes') loadCodes();
   if(id === 'account') setText('accBal', userBalance+'৳');
+  if(id === 'notifications') loadUserNotifications();
 }
 function goHome(){ showSec('home'); }
+
+
+
+/* ═══════════════ CREATOR NOTIFY USER PUSH + INBOX ═══════════════ */
+let userNotificationsUnsub=null;
+function creatorNotifyApiBase(){return 'https://creator-notify.ydh.workers.dev';}
+async function enableCreatorPush(){
+  const status=$('pushSubscribeStatus'), btn=$('pushSubscribeBtn');
+  if(!currentUser){if(status)status.textContent='Please log in first.';return;}
+  if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window)){
+    if(status)status.textContent='এই ব্রাউজারে Push Notification support নেই; HTTPS ব্যবহার করুন।';return;
+  }
+  if(Notification.permission==='denied'){
+    if(status)status.textContent='Browser settings থেকে এই site-এর Notifications Allow করুন।';return;
+  }
+  if(btn){btn.disabled=true;btn.textContent='Connecting…';}
+  try{
+    const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
+    if(permission!=='granted')throw new Error('Notification permission was not granted.');
+    const reg=await navigator.serviceWorker.register('/creator-notify-sw.js',{scope:'/'});
+    await navigator.serviceWorker.ready;
+    const site=await fetch(creatorNotifyApiBase()+'/v1/sites/lookup').then(async r=>{const d=await r.json();if(!r.ok)throw new Error((d.error&&d.error.message)||'Website lookup failed');return d;});
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub){
+      let vapid=site.vapid_public_key;
+      if(!vapid){const cfg=await fetch(creatorNotifyApiBase()+'/v1/subscriptions/config?website_id='+encodeURIComponent(site.website_id)).then(async r=>{const d=await r.json();if(!r.ok)throw new Error((d.error&&d.error.message)||'Push config failed');return d;});vapid=cfg.vapid_public_key;}
+      const pad='='.repeat((4-(vapid.length%4))%4);
+      const raw=atob((vapid+pad).replace(/-/g,'+').replace(/_/g,'/'));
+      const key=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)key[i]=raw.charCodeAt(i);
+      sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key});
+    }
+    const json=sub.toJSON();
+    const res=await fetch(creatorNotifyApiBase()+'/v1/subscriptions',{
+      method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({website_id:site.website_id,subscription:{endpoint:sub.endpoint,expirationTime:sub.expirationTime||null,keys:{p256dh:json.keys.p256dh,auth:json.keys.auth}}})
+    });
+    const result=await res.json();if(!res.ok)throw new Error((result.error&&result.error.message)||'Subscription failed');
+    if(status)status.textContent='Push Notification চালু হয়েছে! Admin-এর update এখন এই browser-এ আসবে।';
+    if(btn)btn.textContent='✓ Push Notifications Enabled';
+  }catch(e){if(status)status.textContent='Setup failed: '+(e.message||'Unknown error');if(btn)btn.textContent='Enable Push Notifications';}
+  finally{if(btn)btn.disabled=false;}
+}
+function loadUserNotifications(){
+  const list=$('userNotificationList');if(!list||!currentUser)return;
+  if(userNotificationsUnsub){userNotificationsUnsub();userNotificationsUnsub=null;}
+  list.innerHTML='<div style="padding:18px;text-align:center;color:var(--mu)">Loading notifications…</div>';
+  userNotificationsUnsub=db.collection('users').doc(currentUser.uid).collection('notifications').orderBy('createdAt','desc').limit(50).onSnapshot(snap=>{
+    if(snap.empty){list.innerHTML='<div style="padding:18px;text-align:center;color:var(--mu)">No notifications yet.</div>';return;}
+    list.innerHTML='';
+    snap.forEach(doc=>{
+      const d=doc.data(), item=document.createElement('article');
+      item.style.cssText='padding:13px 0;border-top:1px solid var(--bd)';
+      const title=document.createElement('strong');title.style.cssText='display:block;font-size:13px;color:var(--tx)';title.textContent=d.title||'Notification';
+      const body=document.createElement('p');body.style.cssText='font-size:12px;color:var(--mu);margin-top:4px;white-space:pre-wrap';body.textContent=d.body||'';
+      const time=document.createElement('small');time.style.cssText='display:block;font-size:10px;color:var(--mu);margin-top:6px';time.textContent=d.createdAt&&d.createdAt.toDate?d.createdAt.toDate().toLocaleString():'Just now';
+      item.append(title,body,time);list.appendChild(item);
+      if(!d.read){doc.ref.update({read:true}).catch(()=>{});}
+    });
+  },err=>{list.textContent='Could not load inbox: '+err.message;});
+}
 
 /* ═══════════════════ ACCOUNT PANEL ═══════════════════ */
 function openAcc(){ $('accPanel').classList.add('show'); lockBody(); }

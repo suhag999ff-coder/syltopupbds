@@ -1,0 +1,10 @@
+SYL TOPUP BD — Creator Notify Integration Setup
+
+1. In Creator Notify, register the exact deployed website domain (including the domain used by users).
+2. Deploy creator-notify-sw.js at the site root on HTTPS.
+3. Deploy the updated index.html, script.js, admin.html, admin-script.js files.
+4. Login to Admin Panel > Notify. Paste your Creator Notify cn_live API key and API base URL (default https://creator-notify.ydh.workers.dev), then Save API Settings.
+5. Users should login, open Account > Notifications & Push and tap Enable Push Notifications once. Browser permission is required.
+6. Admin > Notify > Compose Notification: selecting All users saves a per-user Inbox entry and sends website-wide Push via Creator Notify. Selecting one user saves an Inbox-only message because the API interface evidenced in the supplied P Notify code is website-wide.
+7. SECURITY: settings/creatorNotify contains the sender API key. Firebase Firestore Security Rules MUST restrict reads/writes of this document to authorized admin accounts only. Do not deploy permissive rules. Also restrict users/{uid}/notifications so each user can read/update only their own notifications and only admins can create them.
+8. API behavior is dependent on the Creator Notify site/domain registration, API plan, CORS behavior, and active browser subscriptions. This project does not include credentials or bypass permission prompts.

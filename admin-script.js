@@ -90,27 +90,6 @@ function togglePass(id,btn){
 }
 function adminLogout(){ Swal.fire({title:'Log Out?',icon:'question',showCancelButton:true,confirmButtonText:'Yes',confirmButtonColor:'#2563eb'}).then(r=>{if(r.isConfirmed)auth.signOut().then(()=>location.reload());}); }
 
-function sendAdminNotification(){
-  const title=$('notify-title').value.trim(), body=$('notify-message').value.trim();
-  const target=$('notify-target').value, targetUid=target==='user'?$('notify-user').value:'';
-  if(!title||!body) return Swal.fire('Missing information','Enter a title and message first.','warning');
-  if(target==='user'&&!targetUid) return Swal.fire('Select user','Choose the recipient user.','warning');
-  Swal.fire({title:'Send notification?',text:target==='all'?'This message will appear for all users.':'This message will appear for the selected user.',icon:'question',showCancelButton:true,confirmButtonText:'Send',confirmButtonColor:'#4f46e5'}).then(async result=>{
-    if(!result.isConfirmed) return;
-    try{
-      await db.collection('notifications').add({
-        title,body,audience:target==='all'?'all':'user',
-        targetUid:target==='user'?targetUid:null,
-        createdBy:auth.currentUser?auth.currentUser.uid:null,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
-      $('notify-title').value=''; $('notify-message').value='';
-      Swal.fire({icon:'success',title:'Notification sent',text:'It is now available in the user panel inbox.',timer:1800,showConfirmButton:false});
-    }catch(err){Swal.fire('Send failed',err.message,'error');}
-  });
-}
-$('notify-target')?.addEventListener('change',()=>{$('notify-user-wrap').classList.toggle('hidden',$('notify-target').value!=='user');});
-
 auth.onAuthStateChanged(user=>{
   if(Swal.isVisible()) Swal.close();
   if(user){
@@ -173,14 +152,9 @@ function startAllListeners(){
     allUsers=[];
     snap.forEach(doc=>allUsers.push(Object.assign({id:doc.id},doc.data())));
     allUsers.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-    const recipient=$('notify-user');
-    if(recipient){
-      const selected=recipient.value;
-      recipient.innerHTML='<option value="">Choose user...</option>'+allUsers.map(u=>'<option value="'+esc(u.id)+'">'+esc(u.name||u.email||u.id)+' — '+esc(u.email||u.id)+'</option>').join('');
-      recipient.value=selected;
-    }
     setText('dash-users',allUsers.length);
     renderUsers(allUsers);
+    renderCreatorNotifyRecipients();
     if(currentUserView) refreshCurrentUserView();
   });
 
@@ -241,17 +215,11 @@ function startAllListeners(){
     renderCodes();
   });
 
-  db.collection('notifications').orderBy('createdAt','desc').limit(30).onSnapshot(snap=>{
-    const box=$('admin-notifications-list'); if(!box) return;
-    if(snap.empty){box.innerHTML='<div class="text-xs p-3" style="color:var(--muted)">No notifications sent yet.</div>';return;}
-    box.innerHTML='';
-    snap.forEach(doc=>{
-      const n=doc.data();
-      const item=document.createElement('div'); item.className='card mb-2';
-      item.innerHTML='<div class="font-bold text-sm">'+esc(n.title||'Notification')+'</div><p class="text-xs mt-1" style="color:var(--muted)">'+esc(n.body||'')+'</p><div class="text-[10px] mt-2" style="color:var(--muted)">'+(n.audience==='all'?'All users':'Specific user')+' · '+esc(fmtDate(n.createdAt))+'</div>';
-      box.appendChild(item);
-    });
-  },err=>{const box=$('admin-notifications-list');if(box)box.textContent='Unable to load notifications: '+err.message;});
+  db.collection('settings').doc('creatorNotify').onSnapshot(doc=>{
+    const cfg=doc.exists?doc.data():{};
+    if($('creator-notify-key')) $('creator-notify-key').value=cfg.apiKey||'';
+    if($('creator-notify-base')) $('creator-notify-base').value=cfg.baseUrl||'https://creator-notify.ydh.workers.dev';
+  });
 
   db.collection('settings').doc('general').onSnapshot(doc=>{
     settingsData=doc.exists?doc.data():{};
@@ -1261,6 +1229,74 @@ async function testPlayerApi(){
     box.className='api-test-result error';
     box.innerHTML='<ul class="api-step-list"><li><span class="fail">✕</span><span class="msg"><b>Failed:</b> '+esc(msg)+'</span></li></ul>';
   }
+}
+
+
+
+/* ═══════════════ CREATOR NOTIFY PUSH + INBOX ═══════════════ */
+function renderCreatorNotifyRecipients(){
+  const sel=$('creator-notify-recipient');
+  if(!sel) return;
+  const current=sel.value||'all';
+  sel.innerHTML='<option value="all">All users (Inbox + Push)</option>'+
+    allUsers.map(u=>'<option value="'+esc(u.id)+'">'+esc((u.name||u.email||u.id)+' · '+(u.email||''))+'</option>').join('');
+  if([...sel.options].some(o=>o.value===current)) sel.value=current;
+}
+async function saveCreatorNotifySettings(){
+  const apiKey=$('creator-notify-key').value.trim();
+  const baseUrl=$('creator-notify-base').value.trim().replace(/\/$/,'');
+  if(!apiKey||!baseUrl) return Swal.fire('Missing fields','API key and API server are required.','warning');
+  if(!/^https:\/\//i.test(baseUrl)) return Swal.fire('Invalid URL','API server must use HTTPS.','warning');
+  try{
+    await db.collection('settings').doc('creatorNotify').set({apiKey,baseUrl,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    floatToast('Creator Notify settings saved ✓','#10b981');
+  }catch(e){ Swal.fire('Save failed',e.message,'error'); }
+}
+async function sendCreatorNotification(){
+  const title=$('creator-notify-title').value.trim()||siteName;
+  const body=$('creator-notify-body').value.trim();
+  const recipient=$('creator-notify-recipient').value||'all';
+  if(!body) return Swal.fire('Message required','Write a notification message first.','warning');
+  const cfg=(await db.collection('settings').doc('creatorNotify').get()).data()||{};
+  if(recipient==='all'&&(!cfg.apiKey||!cfg.baseUrl)) return Swal.fire('API not configured','Save Creator Notify API settings first.','warning');
+  const btn=document.querySelector('#view-notifications button[onclick="sendCreatorNotification()"]');
+  if(btn){btn.disabled=true;btn.style.opacity='.65';}
+  const status=$('creator-notify-status');
+  status.classList.remove('hidden');status.textContent='Sending…';
+  try{
+    // Persist to each recipient's authenticated Inbox collection.
+    const targets=recipient==='all'?allUsers:allUsers.filter(u=>u.id===recipient);
+    if(recipient!=='all'&&!targets.length) throw new Error('Selected user was not found.');
+    for(let offset=0;offset<targets.length;offset+=450){
+      const batch=db.batch();
+      targets.slice(offset,offset+450).forEach(u=>{
+        const ref=db.collection('users').doc(u.id).collection('notifications').doc();
+        batch.set(ref,{title,body,createdAt:firebase.firestore.FieldValue.serverTimestamp(),read:false,source:'admin'});
+      });
+      await batch.commit();
+    }
+    let pushResult=null;
+    if(recipient==='all'){
+      const res=await fetch(cfg.baseUrl.replace(/\/$/,'')+'/v1/notifications',{
+        method:'POST',
+        headers:{'content-type':'application/json','authorization':'Bearer '+cfg.apiKey},
+        body:JSON.stringify({title,body})
+      });
+      let payload={};try{payload=await res.json();}catch(_){}
+      if(!res.ok) throw new Error((payload&&payload.error&&payload.error.message)||('Creator Notify HTTP '+res.status));
+      pushResult=payload;
+    }
+    $('creator-notify-body').value='';
+    status.textContent=recipient==='all'
+      ? 'Inbox saved for '+targets.length+' user(s). Creator Notify accepted '+(pushResult&&pushResult.accepted_subscriptions||0)+' subscription(s).'
+      : 'Inbox message saved for selected user.';
+    status.style.color='#047857';
+    Swal.fire({icon:'success',title:'Notification processed',text:status.textContent});
+  }catch(e){
+    status.textContent='Failed: '+(e.message||'Unknown error');
+    status.style.color='#b91c1c';
+    Swal.fire('Notification failed',e.message||'Unknown error','error');
+  }finally{if(btn){btn.disabled=false;btn.style.opacity='';}}
 }
 
 /* ═══════════════ INIT ═══════════════ */
